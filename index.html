@@ -19,8 +19,8 @@
     <header class="p-5 border-b border-amber-500/20 flex justify-between items-center bg-black/80 sticky top-0 z-50 backdrop-blur-lg">
         <h1 class="text-2xl font-black text-amber-500 tracking-tighter">BEER<span class="text-white">PULSE</span></h1>
         <div class="flex items-center gap-4">
-            <span class="hidden md:block text-[10px] text-gray-500 uppercase tracking-widest">Global Craft Feed</span>
-            <div class="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span class="hidden md:block text-[10px] text-gray-500 uppercase tracking-widest text-amber-500/50">Global Craft Feed</span>
+            <div id="connection-status" class="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
         </div>
     </header>
 
@@ -31,18 +31,12 @@
                 <h2 class="text-2xl font-bold flex items-center gap-2">
                     <i class="fa-solid fa-bolt text-amber-500"></i> Live Pulse
                 </h2>
-                <span class="text-xs text-gray-500">Auto-refreshing</span>
+                <span class="text-[10px] uppercase text-gray-500 tracking-widest">Auto-refreshing</span>
             </div>
             
             <div id="live-feed" class="space-y-6">
-                <div class="animate-pulse flex space-x-4">
-                    <div class="flex-1 space-y-4 py-1">
-                        <div class="h-4 bg-gray-800 rounded w-3/4"></div>
-                        <div class="space-y-2">
-                            <div class="h-4 bg-gray-800 rounded"></div>
-                            <div class="h-4 bg-gray-800 rounded w-5/6"></div>
-                        </div>
-                    </div>
+                <div class="text-gray-700 py-10 text-center border-2 border-dashed border-gray-800 rounded-xl italic">
+                    Initializing connection to brewery network...
                 </div>
             </div>
         </section>
@@ -52,66 +46,83 @@
                 <i class="fa-solid fa-calendar-day text-amber-500"></i> Upcoming Events
             </h2>
             <div id="events-list" class="space-y-4">
-                <p class="text-gray-600 italic">Checking for upcoming festivals...</p>
+                <p class="text-gray-700 text-sm italic tracking-wide">Syncing calendar...</p>
             </div>
         </section>
 
     </main>
 
-    <script>
-        // Supabase Configuration
-        const SUPABASE_URL = 'https://kmviidvvmnugocchnmbu.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttdmlpZHZ2bW51Z29jY2hubWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMTUxMDcsImV4cCI6MjA4NDU5MTEwN30.6tFyC7RA4_5B-lsuvKvPrjXTAekAOm6paQhWypKj38k';        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    <footer class="mt-20 p-10 border-t border-gray-900 text-center">
+        <p class="text-[10px] text-gray-600 uppercase tracking-[0.2em]">BeerPulse Systems © 2026</p>
+    </footer>
 
-        // Function to detect if text is Hebrew to change alignment
+    <script>
+        // הארכיטקטורה של BeerPulse
+        const SUPABASE_URL = 'https://kmviidvvmnugocchnmbu.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttdmlpZHZ2bW51Z29jY2hubWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMTUxMDcsImV4cCI6MjA4NDU5MTEwN30.6tFyC7RA4_5B-lsuvKvPrjXTAekAOm6paQhWypKj38k';
+        
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         function getDirection(text) {
             const hebrewPattern = /[\u0590-\u05FF]/;
             return hebrewPattern.test(text) ? 'rtl' : 'ltr';
         }
 
         async function updateDashboard() {
-            // Fetch Feed
-            let { data: feed } = await _supabase.from('live_feed').select('*').order('created_at', { ascending: false });
-            const feedContainer = document.getElementById('live-feed');
-            
-            if (feed && feed.length > 0) {
-                feedContainer.innerHTML = feed.map(item => `
-                    <div class="bg-gray-900 border border-gray-800 p-5 rounded-xl shadow-2xl hover:border-amber-500/50 transition-all duration-300">
-                        <div class="flex justify-between items-start mb-3">
-                            <span class="text-amber-500 font-bold tracking-wide uppercase text-xs">${item.brewery_name}</span>
-                            <span class="text-[10px] text-gray-500">${new Date(item.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                        </div>
-                        <p class="text-sm leading-relaxed ${getDirection(item.content)}">${item.content}</p>
-                    </div>
-                `).join('');
-            } else {
-                feedContainer.innerHTML = '<div class="text-gray-700 py-10 text-center border-2 border-dashed border-gray-800 rounded-xl">No live updates yet. Scouting the web...</div>';
-            }
+            try {
+                // משיכת הפיד
+                let { data: feed, error: feedError } = await _supabase.from('live_feed').select('*').order('created_at', { ascending: false });
+                
+                if (feedError) throw feedError;
 
-            // Fetch Events
-            let { data: events } = await _supabase.from('events').select('*').order('event_date', { ascending: true });
-            const eventContainer = document.getElementById('events-list');
+                const feedContainer = document.getElementById('live-feed');
+                if (feed && feed.length > 0) {
+                    feedContainer.innerHTML = feed.map(item => `
+                        <div class="bg-gray-900 border border-gray-800 p-5 rounded-xl shadow-2xl hover:border-amber-500/50 transition-all duration-300 group">
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="text-amber-500 font-bold tracking-wide uppercase text-[10px]">${item.brewery_name}</span>
+                                <span class="text-[10px] text-gray-600">${new Date(item.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            </div>
+                            <p class="text-sm leading-relaxed ${getDirection(item.content)} text-gray-300 group-hover:text-white transition-colors">${item.content}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    feedContainer.innerHTML = '<div class="text-gray-700 py-10 text-center border-2 border-dashed border-gray-800 rounded-xl">No live updates in the feed. Add some data in Supabase!</div>';
+                }
 
-            if (events && events.length > 0) {
-                eventContainer.innerHTML = events.map(ev => `
-                    <div class="bg-gray-900/50 border border-gray-800 p-4 rounded-lg flex gap-4 items-center">
-                        <div class="text-center bg-amber-500 text-black p-2 rounded min-w-[60px]">
-                            <span class="block text-xs font-bold uppercase">${new Date(ev.event_date).toLocaleString('en-US', {month: 'short'})}</span>
-                            <span class="block text-lg font-black">${new Date(ev.event_date).getDate()}</span>
+                // משיכת אירועים
+                let { data: events, error: eventError } = await _supabase.from('events').select('*').order('event_date', { ascending: true });
+                
+                if (eventError) throw eventError;
+
+                const eventContainer = document.getElementById('events-list');
+                if (events && events.length > 0) {
+                    eventContainer.innerHTML = events.map(ev => `
+                        <div class="bg-gray-900/40 border border-gray-800 p-4 rounded-lg flex gap-4 items-center hover:bg-gray-800 transition-colors">
+                            <div class="text-center bg-amber-600 text-black p-2 rounded min-w-[55px]">
+                                <span class="block text-[10px] font-bold uppercase">${new Date(ev.event_date).toLocaleString('en-US', {month: 'short'})}</span>
+                                <span class="block text-lg font-black leading-none mt-1">${new Date(ev.event_date).getDate()}</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-sm ${getDirection(ev.event_name)} text-gray-200">${ev.event_name}</h3>
+                                <p class="text-[10px] text-gray-500 uppercase tracking-tighter mt-1"><i class="fa-solid fa-location-dot mr-1"></i> ${ev.location}</p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 class="font-bold text-sm ${getDirection(ev.event_name)}">${ev.event_name}</h3>
-                            <p class="text-xs text-gray-500">${ev.location}</p>
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                eventContainer.innerHTML = '<p class="text-gray-700 text-sm">No events scheduled. Stay tuned!</p>';
+                    `).join('');
+                } else {
+                    eventContainer.innerHTML = '<p class="text-gray-700 text-sm italic">No upcoming events found.</p>';
+                }
+
+                document.getElementById('connection-status').classList.replace('bg-amber-500', 'bg-green-500');
+
+            } catch (err) {
+                console.error('Connection error:', err.message);
+                document.getElementById('connection-status').classList.replace('bg-green-500', 'bg-red-500');
             }
         }
 
         updateDashboard();
-        setInterval(updateDashboard, 30000); // Auto-refresh every 30 seconds
+        setInterval(updateDashboard, 20000); // רענון כל 20 שניות
     </script>
 </body>
 </html>
