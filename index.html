@@ -67,12 +67,22 @@
         const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttdmlpZHZ2bW51Z29jY2hubWJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMTUxMDcsImV4cCI6MjA4NDU5MTEwN30.6tFyC7RA4_5B-lsuvKvPrjXTAekAOm6paQhWypKj38k';
         const _supabase = supabase.createClient(S_URL, S_KEY);
 
-        function toggleAdmin() {
-            const pass = prompt("Enter Admin Password:");
-            if(pass === "1234") { // שנה את הסיסמה הזו בעתיד
-                document.getElementById('admin-panel').classList.toggle('admin-hidden');
-            } else {
-                alert("Access Denied");
+       function toggleAdmin() {
+    console.log("Admin button clicked"); // זה יעזור לנו לבדוק אם הלחיצה עובדת
+    const pass = prompt("Enter Admin Password:");
+    if(pass === "1234") {
+        const panel = document.getElementById('admin-panel');
+        if (panel.classList.contains('admin-hidden')) {
+            panel.classList.remove('admin-hidden');
+            panel.style.display = 'block'; // הוספתי את זה כדי להיות בטוח שזה יופיע
+        } else {
+            panel.classList.add('admin-hidden');
+            panel.style.display = 'none';
+        }
+    } else if (pass !== null) {
+        alert("Access Denied");
+    }
+}
             }
         }
 
