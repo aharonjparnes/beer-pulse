@@ -3,44 +3,50 @@ const axios = require('axios');
 async function sendBeerUpdate() {
     const APIFY_TOKEN = process.env.APIFY_TOKEN;
     const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-    const DATASET_ID = "Dk8oGPhm0nC5dJdti"; // מזהה ה-Dataset מהתמונות שלך
+    const DATASET_ID = "Dk8oGPhm0nC5dJdti";
     const CHAT_ID = "@beerpulsenews";
 
     try {
-        // 1. משיכת הנתונים האחרונים מה-Dataset של Apify
-        const apifyUrl = `https://api.apify.com/v2/datasets/${DATASET_ID}/items?token=${APIFY_TOKEN}&limit=1&desc=1`;
+        // משיכת הנתונים - אנחנו מבקשים את הפריטים האחרונים שנוספו
+        const apifyUrl = `https://api.apify.com/v2/datasets/${DATASET_ID}/items?token=${APIFY_TOKEN}&limit=5&desc=1&clean=1`;
         const response = await axios.get(apifyUrl);
         
         if (!response.data || response.data.length === 0) {
-            console.log("No new posts found.");
+            console.log("No data found in dataset.");
             return;
         }
 
-        const post = response.data[0];
+        // חיפוש הפריט הראשון ברשימה שהוא באמת פוסט ולא רק מידע על העמוד
+        const post = response.data.find(item => item.type === 'post' || item.url.includes('posts') || item.text);
 
-        // 2. חילוץ הטקסט והקישור הנכון (הוספנו בדיקה לכמה שדות אפשריים)
-        const text = post.text || post.caption || post.fullText || "עדכון חדש ממבשלה!";
-        const postUrl = post.url || post.facebookUrl || `https://www.facebook.com/${post.facebookId}/posts/${post.postId}`;
+        if (!post) {
+            console.log("No specific post found in the latest items.");
+            return;
+        }
 
-        // 3. חיתוך הטקסט כדי שלא יעבור את מגבלת טלגרם (1024 תווים)
-        const shortText = text.length > 900 ? text.substring(0, 900) + "..." : text;
+        // חילוץ נתונים מדויק
+        const breweryName = post.pageName || post.user || "מבשלה לא ידועה";
+        const text = post.text || post.caption || "פוסט חדש עלה לעמוד!";
+        
+        // התיקון הקריטי ללינק: מחפשים את ה-URL של הפוסט הספציפי
+        const postUrl = post.url || post.canonicalUrl || `https://www.facebook.com/${post.facebookId}/posts/${post.postId}`;
 
-        // 4. בניית ההודעה בפורמט HTML
-        const message = `<b>🍺 עדכון מבשלה חדש 🍺</b>\n\n${shortText}\n\n🔗 <a href="${postUrl}">לפוסט המלא בפייסבוק</a>`;
+        const shortText = text.length > 800 ? text.substring(0, 800) + "..." : text;
 
-        // 5. שליחה לטלגרם
+        const message = `<b>🍺 עדכון מבשלה חדש 🍺</b>\n\n<b>מבשלה:</b> ${breweryName}\n\n${shortText}\n\n🔗 <a href="${postUrl}">לפוסט המלא בפייסבוק</a>`;
+
         const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
         await axios.post(telegramUrl, {
             chat_id: CHAT_ID,
             text: message,
             parse_mode: 'HTML',
-            disable_web_page_preview: false // מוודא שטלגרם יציג תצוגה מקדימה של התמונה
+            disable_web_page_preview: false 
         });
 
-        console.log("Message sent successfully!");
+        console.log(`Success: Sent update for ${breweryName}`);
 
     } catch (error) {
-        console.error("Error running update:", error.message);
+        console.error("Error:", error.message);
     }
 }
 
