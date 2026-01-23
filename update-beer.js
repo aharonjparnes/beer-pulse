@@ -7,30 +7,31 @@ async function sendBeerUpdate() {
     const CHAT_ID = "@beerpulsenews";
 
     try {
-        const apifyUrl = `https://api.apify.com/v2/datasets/${DATASET_ID}/items?token=${APIFY_TOKEN}&limit=5&desc=1&clean=1`;
+        // משיכת 10 פריטים כדי לוודא שאנחנו מוצאים פוסט אמיתי ולא רק פרופיל
+        const apifyUrl = `https://api.apify.com/v2/datasets/${DATASET_ID}/items?token=${APIFY_TOKEN}&limit=10&desc=1&clean=1`;
         const response = await axios.get(apifyUrl);
         
         if (!response.data || response.data.length === 0) {
-            console.log("ה-Dataset ריק לגמרי ב-Apify.");
+            console.log("Dataset is empty.");
             return;
         }
 
-        // הדפסה ללוג של ה-Actions כדי שנראה את המבנה האמיתי
-        console.log("דגימת נתונים מ-Apify:", JSON.stringify(response.data[0], null, 2));
+        // הדפסה ללוג כדי שנוכל לראות מה הגיע (עוזר לניפוי שגיאות)
+        console.log("First item sample:", JSON.stringify(response.data[0], null, 2));
 
-        // ניסיון לחלץ פוסט בצורה רחבה מאוד
-        const post = response.data.find(item => item.text || item.caption || item.message || item.url || item.link);
+        // חיפוש פריט שיש לו URL של פוסט (מכיל /posts/ או /videos/ או /photos/)
+        const post = response.data.find(item => 
+            (item.url && (item.url.includes('posts') || item.url.includes('photos') || item.url.includes('videos'))) || 
+            (item.text && item.text.length > 5)
+        ) || response.data[0]; // אם לא מצאנו, ניקח את הראשון כברירת מחדל
 
-        if (!post) {
-            console.log("לא נמצא פריט עם טקסט או קישור. בודק שדות חלופיים...");
-            return;
-        }
-
-        // חילוץ טקסט - בודק את כל האפשרויות של פייסבוק [cite: 2026-01-23]
-        const rawText = post.text || post.caption || post.message || post.description || "עדכון חדש עלה!";
-        const breweryName = post.pageName || post.user || post.ownerName || "מבשלה";
+        // חילוץ שם המבשלה משדות שונים
+        const breweryName = post.pageName || post.user || post.userName || post.ownerName || "מבשלה";
         
-        // חילוץ לינק - מחפש לינק ישיר לפוסט [cite: 2026-01-23]
+        // חילוץ טקסט
+        const rawText = post.text || post.caption || post.message || post.description || "עדכון חדש עלה!";
+        
+        // חילוץ לינק - סדר עדיפויות ללינק ספציפי
         const postUrl = post.url || post.link || post.facebookUrl || post.canonicalUrl;
 
         const shortText = rawText.length > 800 ? rawText.substring(0, 800) + "..." : rawText;
@@ -45,11 +46,10 @@ async function sendBeerUpdate() {
             disable_web_page_preview: false 
         });
 
-        console.log(`הודעה נשלחה בהצלחה עבור: ${breweryName}`);
+        console.log(`Successfully sent update for: ${breweryName}`);
 
     } catch (error) {
-        console.error("שגיאה בהרצה:", error.message);
-        if (error.response) console.log("פירוט שגיאה מטלגרם:", error.response.data);
+        console.error("Error:", error.message);
     }
 }
 
