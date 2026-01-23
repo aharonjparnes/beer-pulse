@@ -1,0 +1,23 @@
+name: Update Beer Content
+on:
+  schedule:
+    - cron: '0 * * * *' # רץ בכל שעה עגולה
+  workflow_dispatch: # מאפשר הרצה ידנית בלחיצת כפתור
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm install axios
+      - name: Run update script
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: "@beerpulsenews"
+          DATASET_ID: "Dk8oGPhm0nC5dJdti" # ה-ID שמצאנו קודם
+        run: node update-beer.js
