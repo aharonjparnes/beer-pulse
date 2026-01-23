@@ -7,31 +7,31 @@ async function sendBeerUpdate() {
     const CHAT_ID = "@beerpulsenews";
 
     try {
-        // משיכת הנתונים - אנחנו מבקשים את הפריטים האחרונים שנוספו
+        // משיכת 5 פריטים אחרונים כדי לוודא שאנחנו לא מפספסים פוסט בגלל שורת מערכת [cite: 2026-01-23]
         const apifyUrl = `https://api.apify.com/v2/datasets/${DATASET_ID}/items?token=${APIFY_TOKEN}&limit=5&desc=1&clean=1`;
         const response = await axios.get(apifyUrl);
         
         if (!response.data || response.data.length === 0) {
-            console.log("No data found in dataset.");
+            console.log("Dataset is empty.");
             return;
         }
 
-        // חיפוש הפריט הראשון ברשימה שהוא באמת פוסט ולא רק מידע על העמוד
-        const post = response.data.find(item => item.type === 'post' || item.url.includes('posts') || item.text);
+        // חיפוש פשוט: הפריט הראשון שיש לו טקסט או URL [cite: 2026-01-23]
+        const post = response.data.find(item => (item.text || item.caption) && item.url);
 
         if (!post) {
-            console.log("No specific post found in the latest items.");
+            console.log("No valid post found in the last 5 items.");
             return;
         }
 
-        // חילוץ נתונים מדויק
-        const breweryName = post.pageName || post.user || "מבשלה לא ידועה";
-        const text = post.text || post.caption || "פוסט חדש עלה לעמוד!";
+        // חילוץ נתונים עם "גיבוי" לכל שדה [cite: 2026-01-23]
+        const breweryName = post.pageName || post.user || post.ownerName || "עדכון ממבשלה";
+        const postText = post.text || post.caption || post.description || "";
         
-        // התיקון הקריטי ללינק: מחפשים את ה-URL של הפוסט הספציפי
-        const postUrl = post.url || post.canonicalUrl || `https://www.facebook.com/${post.facebookId}/posts/${post.postId}`;
+        // התיקון הקריטי ללינק - מנסים למצוא את הלינק הספציפי ביותר [cite: 2026-01-23]
+        const postUrl = post.url || post.canonicalUrl || post.facebookUrl;
 
-        const shortText = text.length > 800 ? text.substring(0, 800) + "..." : text;
+        const shortText = postText.length > 850 ? postText.substring(0, 850) + "..." : postText;
 
         const message = `<b>🍺 עדכון מבשלה חדש 🍺</b>\n\n<b>מבשלה:</b> ${breweryName}\n\n${shortText}\n\n🔗 <a href="${postUrl}">לפוסט המלא בפייסבוק</a>`;
 
@@ -43,10 +43,10 @@ async function sendBeerUpdate() {
             disable_web_page_preview: false 
         });
 
-        console.log(`Success: Sent update for ${breweryName}`);
+        console.log(`Successfully sent: ${breweryName}`);
 
     } catch (error) {
-        console.error("Error:", error.message);
+        console.error("Error details:", error.response ? error.response.data : error.message);
     }
 }
 
