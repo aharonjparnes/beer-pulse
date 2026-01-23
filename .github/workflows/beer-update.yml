@@ -1,23 +1,30 @@
-name: Update Beer Content
+name: Beer Pulse Sync
+
 on:
   schedule:
-    - cron: '0 * * * *'
-  workflow_dispatch:
+    - cron: '0 * * * *' # הרצה אוטומטית בכל שעה עגולה [cite: 2026-01-22]
+  workflow_dispatch: # מאפשר לך להריץ את התהליך ידנית בלחיצת כפתור [cite: 2026-01-22]
 
 jobs:
-  update:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3 # מושך את הקוד מה-Repository שלך [cite: 2026-01-22]
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '18' # מגדיר את סביבת העבודה של Node.js [cite: 2026-01-22]
+
       - name: Install dependencies
-        run: npm install axios
-      - name: Run update script
+        run: npm install axios # מתקין את הספרייה שמאפשרת לקוד "לדבר" עם ה-API [cite: 2026-01-22]
+
+      - name: Run Updates
         env:
-          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: "@beerpulsenews"
-          DATASET_ID: "Dk8oGPhm0nC5dJdti"
-        run: node update-beer.js
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }} # משיכת הטוקן של Apify מה-Secrets [cite: 2026-01-23]
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }} # משיכת הטוקן של טלגרם מה-Secrets [cite: 2026-01-23]
+        run: |
+          node update-facebook.js
+          node update-instagram.js
